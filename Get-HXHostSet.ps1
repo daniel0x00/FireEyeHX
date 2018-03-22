@@ -21,7 +21,10 @@ function Get-HXHostSet {
         [string] $Limit,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Sort
+        [string] $Sort,
+
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [string] $Filter
     )
 
     begin { }
@@ -38,6 +41,7 @@ function Get-HXHostSet {
         if ($Offset) { $Endpoint = $Endpoint + "&offset=" + $Offset }
         if ($Limit) { $Endpoint = $Endpoint + "&limit=" + $Limit }
         if ($Sort) { $Endpoint = $Endpoint + "&sort=" + $Sort }
+        if ($Filter) { $Endpoint = $Endpoint + "&" + $Filter }
 
 
         # Request:
