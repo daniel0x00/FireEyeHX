@@ -18,6 +18,7 @@ function New-HXSession {
                 $Endpoint = $Uri+'/hx/api/v3/token'
                 Write-Verbose "Endpoint: $Endpoint"
             }
+            else { $Endpoint = $Uri }
 
             # Get the plaintext password from the credential object:
             $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Credential.Password)
@@ -37,6 +38,7 @@ function New-HXSession {
             # Return the object:
             $out = New-Object System.Object
             $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
+            $out | Add-Member -Type NoteProperty -Name Endpoint -Value $Endpoint
             $out | Add-Member -Type NoteProperty -Name WebSession -Value $LoginSession
             $out | Add-Member -Type NoteProperty -Name TokenSession -Value $TokenSession
             $out
