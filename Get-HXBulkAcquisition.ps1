@@ -1,4 +1,4 @@
-function Get-HXHostSet {
+function Get-HXBulkAcquisition {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(    
@@ -32,7 +32,7 @@ function Get-HXHostSet {
 
         # Uri filtering:
         if ($Uri -match '\d$') { 
-            $Endpoint = $Uri+'/hx/api/v3/host_sets/?'
+            $Endpoint = $Uri+'/hx/api/v3/acqs/bulk/?'
             Write-Verbose "Endpoint: $Endpoint"
         }
         else { $Endpoint = $Uri + "/?" }
