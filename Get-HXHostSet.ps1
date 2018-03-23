@@ -27,6 +27,9 @@ function Get-HXHostSet {
         [string] $Filter,
 
         [Parameter(Mandatory=$false)]
+        [switch] $Passthru,
+
+        [Parameter(Mandatory=$false)]
         [switch] $Raw=$false
     )
 
@@ -65,6 +68,14 @@ function Get-HXHostSet {
                 $out | Add-Member -Type NoteProperty -Name name -Value $_.name
                 $out | Add-Member -Type NoteProperty -Name type -Value $_.type
                 $out | Add-Member -Type NoteProperty -Name url -Value $_.url
+
+                # Check if login data is required to be passed thru:
+                if ($Passthru) {
+                    $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
+                    if ($WebSession) { $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession } 
+                    if ($TokenSession) { $out | Add-Member -Type NoteProperty -Name TokenSession -Value $TokenSession }
+                }
+
                 $out
             }
         }

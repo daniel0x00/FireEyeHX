@@ -12,6 +12,9 @@ function Get-HXVersion {
         [string] $TokenSession,
 
         [Parameter(Mandatory=$false)]
+        [switch] $Passthru,
+
+        [Parameter(Mandatory=$false)]
         [switch] $Raw=$false
     )
 
@@ -43,6 +46,13 @@ function Get-HXVersion {
             $out | Add-Member -Type NoteProperty -Name isUpgraded -Value $WebRequestContent.data.isUpgraded
             $out | Add-Member -Type NoteProperty -Name msoVersion -Value $WebRequestContent.data.msoVersion
             $out | Add-Member -Type NoteProperty -Name version -Value $WebRequestContent.data.version
+
+            # Check if login data is required to be passed thru:
+            if ($Passthru) {
+                $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
+                if ($WebSession) { $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession } 
+                if ($TokenSession) { $out | Add-Member -Type NoteProperty -Name TokenSession -Value $TokenSession }
+            }
         }
         else {
             $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
