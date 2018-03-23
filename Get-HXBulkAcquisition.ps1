@@ -24,7 +24,10 @@ function Get-HXBulkAcquisition {
         [string] $Sort,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Filter
+        [string] $Filter,
+
+        [Parameter(Mandatory=$false)]
+        [switch] $Raw=$false
     )
 
     begin { }
@@ -44,17 +47,40 @@ function Get-HXBulkAcquisition {
         if ($Filter) { $Endpoint = $Endpoint + "&" + $Filter }
 
         # Request:
-        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get 
+        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get
+        $WebRequestContent = $WebRequest.Content | ConvertFrom-Json
+
 
         # Return the object:
-        $out = New-Object System.Object
-        $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
-        $out | Add-Member -Type NoteProperty -Name Endpoint -Value $Endpoint
-        $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession
-        $out | Add-Member -Type NoteProperty -Name TokenSession -Value $TokenSession
-        $out | Add-Member -Type NoteProperty -Name RequestStatusCode -Value $WebRequest.StatusCode
-        $out | Add-Member -Type NoteProperty -Name RequestContent -Value $WebRequest.Content
-        $out
+        if (-not($Raw)) {
+            $WebRequestContent.data.entries | Foreach-Object {
+                $out = New-Object System.Object
+                $out | Add-Member -Type NoteProperty -Name id -Value $_._id
+                $out | Add-Member -Type NoteProperty -Name revision -Value $_._revision
+                $out | Add-Member -Type NoteProperty -Name comment -Value $_.comment
+                $out | Add-Member -Type NoteProperty -Name create_actor_id -Value $_.create_actor._id
+                $out | Add-Member -Type NoteProperty -Name create_actor_name -Value $_.create_actor.username
+                $out | Add-Member -Type NoteProperty -Name create_time -Value $_.create_time
+                $out | Add-Member -Type NoteProperty -Name update_actor_id -Value $_.update_actor._id
+                $out | Add-Member -Type NoteProperty -Name update_actor_name -Value $_.update_actor.username
+                $out | Add-Member -Type NoteProperty -Name update_time -Value $_.update_time
+                $out | Add-Member -Type NoteProperty -Name state -Value $_.state
+                $out | Add-Member -Type NoteProperty -Name url -Value $_.url
+                $out | Add-Member -Type NoteProperty -Name running_state -Value $_.stats.running_state
+                
+                $out
+            }
+        }
+        else {
+            $out = New-Object System.Object
+            $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
+            $out | Add-Member -Type NoteProperty -Name Endpoint -Value $Endpoint
+            $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession
+            $out | Add-Member -Type NoteProperty -Name TokenSession -Value $TokenSession
+            $out | Add-Member -Type NoteProperty -Name RequestStatusCode -Value $WebRequest.StatusCode
+            $out | Add-Member -Type NoteProperty -Name RequestContent -Value $WebRequestContent
+            $out
+        }
     }
     end { }
 }
