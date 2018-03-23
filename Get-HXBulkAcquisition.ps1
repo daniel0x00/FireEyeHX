@@ -5,7 +5,7 @@ function Get-HXBulkAcquisition {
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string] $Uri,
 
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
@@ -40,6 +40,10 @@ function Get-HXBulkAcquisition {
         }
         else { $Endpoint = $Uri + "/?" }
 
+         # Header:
+         $headers = @{ "Accept" = "application/json" }
+         if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
+
         if ($Search) { $Endpoint = $Endpoint + "&search=" + $Search }
         if ($Offset) { $Endpoint = $Endpoint + "&offset=" + $Offset }
         if ($Limit) { $Endpoint = $Endpoint + "&limit=" + $Limit }
@@ -47,7 +51,7 @@ function Get-HXBulkAcquisition {
         if ($Filter) { $Endpoint = $Endpoint + "&" + $Filter }
 
         # Request:
-        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get
+        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers
         $WebRequestContent = $WebRequest.Content | ConvertFrom-Json
 
 
