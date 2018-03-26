@@ -66,8 +66,7 @@ function Get-HXBulkAcquisitionDetail {
                 $out | Add-Member -Type NoteProperty -Name revision -Value $_._revision
                 $out | Add-Member -Type NoteProperty -Name complete_at -Value $_.complete_at
                 $out | Add-Member -Type NoteProperty -Name host_id -Value $_.host._id
-                $out | Add-Member -Type NoteProperty -Name host_hostname -Value $_.host.hostname
-                $out | Add-Member -Type NoteProperty -Name host_url -Value $_.host.url
+                $out | Add-Member -Type NoteProperty -Name hostname -Value $_.host.hostname
                 $out | Add-Member -Type NoteProperty -Name queued_at -Value $_.queued_at, 
                 $out | Add-Member -Type NoteProperty -Name result_bytes -Value $_.result.bytes
                 $out | Add-Member -Type NoteProperty -Name result_url -Value $_.result.url
