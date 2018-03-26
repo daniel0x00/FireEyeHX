@@ -1,4 +1,4 @@
-function Get-HXBulkAcquisition {
+function Get-HXBulkAcquisitionDetail {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(    
@@ -12,9 +12,6 @@ function Get-HXBulkAcquisition {
         [string] $TokenSession, 
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Search,
-
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [string] $Offset,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
@@ -26,7 +23,7 @@ function Get-HXBulkAcquisition {
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [string] $Filter,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string] $Id,
 
         [Parameter(Mandatory=$false)]
@@ -41,23 +38,20 @@ function Get-HXBulkAcquisition {
 
         # Uri filtering:
         if ($Uri -match '\d$') { 
-            $Endpoint = $Uri+'/hx/api/v3/acqs/bulk/?'
+            $Endpoint = $Uri+"/hx/api/v3/acqs/bulk/$Id/hosts?"
             Write-Verbose "Endpoint: $Endpoint"
         }
         else { $Endpoint = $Uri + "/?" }
 
-        # Header:
-        $headers = @{ "Accept" = "application/json" }
-        if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
-
         # Enable auto-search by a given host-set id:
-        if ($Id) { $Search = $Id }
-
-        if ($Search) { $Endpoint = $Endpoint + "&search=" + $Search }
         if ($Offset) { $Endpoint = $Endpoint + "&offset=" + $Offset }
         if ($Limit) { $Endpoint = $Endpoint + "&limit=" + $Limit }
         if ($Sort) { $Endpoint = $Endpoint + "&sort=" + $Sort }
         if ($Filter) { $Endpoint = $Endpoint + "&" + $Filter }
+
+        # Header:
+        $headers = @{ "Accept" = "application/json" }
+        if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
 
         # Request:
         $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers
@@ -68,23 +62,23 @@ function Get-HXBulkAcquisition {
         if (-not($Raw)) {
             $WebRequestContent.data.entries | Foreach-Object {
                 $out = New-Object System.Object
-                $out | Add-Member -Type NoteProperty -Name id -Value $_._id
+                $out | Add-Member -Type NoteProperty -Name id -Value $_.bulk_acq._id
                 $out | Add-Member -Type NoteProperty -Name revision -Value $_._revision
-                $out | Add-Member -Type NoteProperty -Name comment -Value $_.comment
-                $out | Add-Member -Type NoteProperty -Name create_actor_id -Value $_.create_actor._id
-                $out | Add-Member -Type NoteProperty -Name create_actor_username -Value $_.create_actor.username
-                $out | Add-Member -Type NoteProperty -Name create_time -Value $_.create_time
-                $out | Add-Member -Type NoteProperty -Name update_actor_id -Value $_.update_actor._id
-                $out | Add-Member -Type NoteProperty -Name update_actor_username -Value $_.update_actor.username
-                $out | Add-Member -Type NoteProperty -Name update_time -Value $_.update_time
+                $out | Add-Member -Type NoteProperty -Name complete_at -Value $_.complete_at
+                $out | Add-Member -Type NoteProperty -Name host_id -Value $_.host._id
+                $out | Add-Member -Type NoteProperty -Name host_hostname -Value $_.host.hostname
+                $out | Add-Member -Type NoteProperty -Name host_url -Value $_.host.url
+                $out | Add-Member -Type NoteProperty -Name queued_at -Value $_.queued_at, 
+                $out | Add-Member -Type NoteProperty -Name result_bytes -Value $_.result.bytes
+                $out | Add-Member -Type NoteProperty -Name result_url -Value $_.result.url
+                $out | Add-Member -Type NoteProperty -Name result_ordinal -Value $_.result_ordinal
                 $out | Add-Member -Type NoteProperty -Name state -Value $_.state
-                $out | Add-Member -Type NoteProperty -Name url -Value $_.url
-                $out | Add-Member -Type NoteProperty -Name running_state -Value $_.stats.running_state
+                $out | Add-Member -Type NoteProperty -Name error -Value $_.error
 
                 # Check if login data is required to be passed thru:
                 if ($Passthru) {
                     $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
-                    if ($WebSession) { $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession } 
+                    if ($WebSession) { $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession }
                     if ($TokenSession) { $out | Add-Member -Type NoteProperty -Name TokenSession -Value $TokenSession }
                 }
                 
