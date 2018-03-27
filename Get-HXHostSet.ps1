@@ -65,7 +65,7 @@ function Get-HXHostSet {
                 $out = New-Object System.Object
                 $out | Add-Member -Type NoteProperty -Name id -Value $_._id
                 $out | Add-Member -Type NoteProperty -Name revision -Value $_._revision
-                $out | Add-Member -Type NoteProperty -Name name -Value $_.name
+                $out | Add-Member -Type NoteProperty -Name hostset -Value $_.name
                 $out | Add-Member -Type NoteProperty -Name type -Value $_.type
                 $out | Add-Member -Type NoteProperty -Name url -Value $_.url
 

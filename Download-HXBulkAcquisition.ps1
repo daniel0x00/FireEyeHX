@@ -15,7 +15,13 @@ function Download-HXBulkAcquisition {
         [string] $Acquisition,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Hostname="undefined",
+        [string] $Hostname='undefined',
+
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [string] $Hostset='undefined',
+
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [string] $Separator='~',
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [string] $Path
@@ -30,10 +36,28 @@ function Download-HXBulkAcquisition {
         # Timestamp calculation:
         $timestamp = Get-Date -Format o | foreach {$_ -replace ":", "."}
 
+        # Controller calculation
+        $controller = [string](([regex]::Match($Uri,"https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)
+
         # Path filtering:
         if (-not($Path -match '.zip$')) {
-            $_path = (Get-Item -Path ".\" -Verbose).FullName + $timestamp + '_' + $Hostname + '_' + [System.IO.Path]::GetFileName($Acquisition)
+            ## filename with FireEye hostname id on it:
+
+            #$_path = (Get-Item -Path ".\" -Verbose).FullName + $timestamp + $Separator + $controller + $Separator + $Hostset + $Separator + $Hostname + $Separator + [System.IO.Path]::GetFileName($Acquisition)
+            
+            ## Filename without FireEye hostname id on it:
+
+            # Determine the path to write to:
+            if ($Path) { $_path = [System.IO.Path]::GetFullPath($Path) }
+            else { $_path = (Get-Item -Path ".\" -Verbose).FullName }
+
+            # Determine the hostname:
+            if ($Hostname -eq 'undefined') { $_hostname = [System.IO.Path]::GetFileName($Acquisition) -replace '.zip', '' }
+            else { $_hostname = $Hostname }
+
+            $_path = [System.IO.Path]::combine($_path, $timestamp + $Separator + $controller + $Separator + $Hostset + $Separator + $_hostname + ".zip")
         }
+        else { $_path = $Path }
 
         # Webclient object. Not using Invoke-WebRequest because the downloaded object is streamed into memory first, harming the performance of the script:
         $wc = New-Object System.Net.WebClient
@@ -41,7 +65,12 @@ function Download-HXBulkAcquisition {
         $wc.Headers.add('X-FeApi-Token',$TokenSession)
         $wc.DownloadFile($Endpoint, $_path)
 
-        Write-Verbose "File $Endpoint downloaded successfully to $_path"
+        $out = New-Object System.Object
+        $out | Add-Member -Type NoteProperty -Name Hostname -Value $Hostname
+        $out | Add-Member -Type NoteProperty -Name Hostset -Value $Hostset
+        $out | Add-Member -Type NoteProperty -Name Acquisition -Value $Acquisition
+        $out | Add-Member -Type NoteProperty -Name File -Value $_path
+        $out
     }
     end { }
 }

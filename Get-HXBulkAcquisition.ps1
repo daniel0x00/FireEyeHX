@@ -29,6 +29,9 @@ function Get-HXBulkAcquisition {
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [string] $Id,
 
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [string] $Hostset,
+
         [Parameter(Mandatory=$false)]
         [switch] $Passthru,
 
@@ -69,6 +72,7 @@ function Get-HXBulkAcquisition {
             $WebRequestContent.data.entries | Foreach-Object {
                 $out = New-Object System.Object
                 $out | Add-Member -Type NoteProperty -Name id -Value $_._id
+                if ($Hostset) { $out | Add-Member -Type NoteProperty -Name hostset -Value $Hostset } 
                 $out | Add-Member -Type NoteProperty -Name revision -Value $_._revision
                 $out | Add-Member -Type NoteProperty -Name comment -Value $_.comment
                 $out | Add-Member -Type NoteProperty -Name create_actor_id -Value $_.create_actor._id
