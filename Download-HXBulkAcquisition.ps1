@@ -66,6 +66,7 @@ function Download-HXBulkAcquisition {
         $wc.DownloadFile($Endpoint, $_path)
 
         $out = New-Object System.Object
+        $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
         $out | Add-Member -Type NoteProperty -Name Hostname -Value $Hostname
         $out | Add-Member -Type NoteProperty -Name Hostset -Value $Hostset
         $out | Add-Member -Type NoteProperty -Name Acquisition -Value $Acquisition
