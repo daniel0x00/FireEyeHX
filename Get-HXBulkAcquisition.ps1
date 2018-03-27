@@ -33,7 +33,7 @@ function Get-HXBulkAcquisition {
         [switch] $Passthru,
 
         [Parameter(Mandatory=$false)]
-        [switch] $Raw=$false
+        [switch] $Raw
     )
 
     begin { }

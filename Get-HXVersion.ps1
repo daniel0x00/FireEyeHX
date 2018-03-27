@@ -15,7 +15,7 @@ function Get-HXVersion {
         [switch] $Passthru,
 
         [Parameter(Mandatory=$false)]
-        [switch] $Raw=$false
+        [switch] $Raw
     )
 
     begin { }

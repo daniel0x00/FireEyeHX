@@ -30,7 +30,7 @@ function Get-HXHostSet {
         [switch] $Passthru,
 
         [Parameter(Mandatory=$false)]
-        [switch] $Raw=$false
+        [switch] $Raw
     )
 
     begin { }
