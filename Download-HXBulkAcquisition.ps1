@@ -25,10 +25,7 @@ function Download-HXBulkAcquisition {
     process {
 
         # Uri filtering:
-        if ($Uri -match '\d$') { 
-            $Endpoint = $Uri+$Acquisition
-            Write-Verbose "Endpoint: $Endpoint"
-        }
+        if ($Uri -match '\d$') { $Endpoint = $Uri+$Acquisition }
 
         # Timestamp calculation:
         $timestamp = Get-Date -Format o | foreach {$_ -replace ":", "."}
@@ -38,12 +35,11 @@ function Download-HXBulkAcquisition {
             $_path = (Get-Item -Path ".\" -Verbose).FullName + $timestamp + '_' + $Hostname + '_' + [System.IO.Path]::GetFileName($Acquisition)
         }
 
-        # Header:
-        $headers = @{ "Accept" = "application/octet-stream" }
-        if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
-
-        # Request:
-        $null = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers -OutFile $_path 
+        # Webclient object. Not using Invoke-WebRequest because the downloaded object is streamed into memory first, harming the performance of the script:
+        $wc = New-Object System.Net.WebClient
+        $wc.Headers.add('Accept','application/octet-stream')
+        $wc.Headers.add('X-FeApi-Token',$TokenSession)
+        $wc.DownloadFile($Endpoint, $_path)
 
         Write-Verbose "File $Endpoint downloaded successfully to $_path"
     }
