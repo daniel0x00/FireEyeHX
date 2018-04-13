@@ -36,7 +36,7 @@ function Download-HXBulkAcquisition {
         # Timestamp calculation:
         $timestamp = Get-Date -Format o | foreach {$_ -replace ":", "."}
 
-        # Controller calculation
+        # Controller name:
         $controller = [string](([regex]::Match($Uri,"https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)
 
         # Path filtering:
@@ -51,11 +51,15 @@ function Download-HXBulkAcquisition {
             if ($Path) { $_path = [System.IO.Path]::GetFullPath($Path) }
             else { $_path = (Get-Item -Path ".\" -Verbose).FullName }
 
+            # Set up the path to the 'raw' folder:
+            $_path = [System.IO.Path]::Combine($_path, 'raw')
+            New-Item -ItemType Directory -Force -Path $_path -ErrorAction Stop | Out-Null
+
             # Determine the hostname:
             if ($Hostname -eq 'undefined') { $_hostname = [System.IO.Path]::GetFileName($Acquisition) -replace '.zip', '' }
             else { $_hostname = $Hostname }
 
-            $_path = [System.IO.Path]::combine($_path, $timestamp + $Separator + $controller + $Separator + $Hostset + $Separator + $_hostname + ".zip")
+            $_path = [System.IO.Path]::Combine($_path, $timestamp + $Separator + $controller + $Separator + $Hostset + $Separator + $_hostname + ".zip")
         }
         else { $_path = $Path }
 
@@ -67,9 +71,9 @@ function Download-HXBulkAcquisition {
 
         $out = New-Object System.Object
         $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
+        $out | Add-Member -Type NoteProperty -Name Acquisition -Value $Acquisition
         $out | Add-Member -Type NoteProperty -Name Hostname -Value $Hostname
         $out | Add-Member -Type NoteProperty -Name Hostset -Value $Hostset
-        $out | Add-Member -Type NoteProperty -Name Acquisition -Value $Acquisition
         $out | Add-Member -Type NoteProperty -Name File -Value $_path
         $out
     }

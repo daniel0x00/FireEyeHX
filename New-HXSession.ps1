@@ -14,10 +14,8 @@ function New-HXSession {
         try
         {
             # Uri filtering:
-            if ($Uri -match '\d$') { 
-                $Endpoint = $Uri+'/hx/api/v3/token'
-                Write-Verbose "Endpoint: $Endpoint"
-            }
+            if ($Uri -match '\d$') { $Endpoint = $Uri+'/hx/api/v3/token' }
+            elseif ($Uri -match '\d/$') { $Endpoint = $Uri+'hx/api/v3/token' }
             else { $Endpoint = $Uri }
 
             # Get the plaintext password from the credential object:
