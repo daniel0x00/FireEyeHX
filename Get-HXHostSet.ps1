@@ -37,10 +37,8 @@ function Get-HXHostSet {
     process {
 
         # Uri filtering:
-        if ($Uri -match '\d$') { 
-            $Endpoint = $Uri+'/hx/api/v3/host_sets/?'
-            Write-Verbose "Endpoint: $Endpoint"
-        }
+        if ($Uri -match '\d$') { $Endpoint = $Uri+'/hx/api/v3/host_sets/?' }
+        elseif ($Uri -match '\d/$') { $Endpoint = $Uri+'hx/api/v3/host_sets/?' }
         else { $Endpoint = $Uri + "/?" }
 
          # Header:

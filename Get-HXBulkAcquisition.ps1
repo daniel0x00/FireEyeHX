@@ -43,10 +43,8 @@ function Get-HXBulkAcquisition {
     process {
 
         # Uri filtering:
-        if ($Uri -match '\d$') { 
-            $Endpoint = $Uri+'/hx/api/v3/acqs/bulk/?'
-            Write-Verbose "Endpoint: $Endpoint"
-        }
+        if ($Uri -match '\d$') { $Endpoint = $Uri+'/hx/api/v3/acqs/bulk/?' }
+        elseif ($Uri -match '\d/$') { $Endpoint = $Uri+'hx/api/v3/acqs/bulk?' }
         else { $Endpoint = $Uri + "/?" }
 
         # Header:

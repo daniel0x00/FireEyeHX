@@ -40,10 +40,8 @@ function Get-HXBulkAcquisitionDetail {
     process {
 
         # Uri filtering:
-        if ($Uri -match '\d$') { 
-            $Endpoint = $Uri+"/hx/api/v3/acqs/bulk/$Id/hosts?"
-            Write-Verbose "Endpoint: $Endpoint"
-        }
+        if ($Uri -match '\d$') { $Endpoint = $Uri+"/hx/api/v3/acqs/bulk/$Id/hosts?" }
+        elseif ($Uri -match '\d/$') { $Endpoint = $Uri+"hx/api/v3/acqs/bulk/$Id/hosts?" }
         else { $Endpoint = $Uri + "/?" }
 
         # Enable auto-search by a given host-set id:

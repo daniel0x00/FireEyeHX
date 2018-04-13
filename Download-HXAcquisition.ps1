@@ -32,6 +32,7 @@ function Download-HXBulkAcquisition {
 
         # Uri filtering:
         if ($Uri -match '\d$') { $Endpoint = $Uri+$Acquisition }
+        elseif ($Uri -match '\d/$') { $Endpoint = $Uri+$Acquisition }
 
         # Timestamp calculation:
         $timestamp = Get-Date -Format o | foreach {$_ -replace ":", "."}

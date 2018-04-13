@@ -22,10 +22,8 @@ function Get-HXVersion {
     process {
 
         # Uri filtering:
-        if ($Uri -match '\d$') { 
-            $Endpoint = $Uri+'/hx/api/v3/version'
-            Write-Verbose "Endpoint: $Endpoint"
-        }
+        if ($Uri -match '\d$') { $Endpoint = $Uri+'/hx/api/v3/version' }
+        elseif ($Uri -match '\d/$') { $Endpoint = $Uri+'hx/api/v3/version' }
         else { $Endpoint = $Uri }
 
         # Header:

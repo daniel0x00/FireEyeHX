@@ -55,6 +55,9 @@ function Parse-HXAcquisition {
         $_changes_path = [System.IO.Path]::Combine($_basepath, 'changes')
         $_tmp_path = [System.IO.Path]::Combine($_basepath, 'tmp')
 
+        # Clean the 'tmp' folder:
+        if (Test-Path $_tmp_path) { Remove-Item $_tmp_path -Force -Recurse }
+
         New-Item -ItemType Directory -Force -Path $_raw_path -ErrorAction Stop | Out-Null
         New-Item -ItemType Directory -Force -Path $_unique_path -ErrorAction Stop | Out-Null
         New-Item -ItemType Directory -Force -Path $_changes_path -ErrorAction Stop | Out-Null
@@ -79,11 +82,8 @@ function Parse-HXAcquisition {
         else { $_file = $File }
 
         # Extract the file to the 'tmp' folder:
-        $_tmp_file = [System.IO.Path]::Combine($_tmp_path, [System.IO.Path]::GetFileName($_file))
-Write-Debug "before unzip: $_file     ----     $_tmp_file"
-[System.IO.Path]::GetDirectoryName($_tmp_file)
-        Unzip -ZipFile $_file -OutPath [System.IO.Path]::GetDirectoryName($_tmp_file) + "/" -ErrorAction Stop
-Write-Debug "after unzip"
+        Unzip -ZipFile $_file -OutPath $_tmp_path -ErrorAction Stop
+ 
         # Verify if the 'manifest.json' exists and parse it:
         $_manifest_file = [System.IO.Path]::Combine($_tmp_path, 'manifest.json')
         if (Test-Path $_manifest_file) {
@@ -93,6 +93,7 @@ Write-Debug "after unzip"
             # Process the manifest and rename the files when needed. Issues files will be deleted:
             $_manifest_content.audits | ForEach-Object { 
                 $extractedfile_filetype = $_.generator
+
                 $_.results | ForEach-Object { 
                     $extractedfile_name = $_.payload
                     $extractedfile_contenttype = $_.type
@@ -154,7 +155,8 @@ Write-Debug "after unzip"
 
                     # Delete the file if it is an issues file:
                     elseif ($extractedfile_contenttype -eq 'application/vnd.mandiant.issues+xml') {
-                        Remove-Item -Path [System.IO.Path]::Combine($_tmp_path, $extractedfile_name)
+                        $_tmp_fullpath = [System.IO.Path]::Combine($_tmp_path, $extractedfile_name)
+                        Remove-Item -Path $_tmp_fullpath
                     }
                 } 
             }
