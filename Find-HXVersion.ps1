@@ -1,4 +1,4 @@
-function Get-HXVersion {
+function Find-HXVersion {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(    

@@ -1,4 +1,4 @@
-function Parse-HXAcquisition {
+function Convert-HXAcquisition {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(
@@ -68,7 +68,7 @@ function Parse-HXAcquisition {
         Write-Verbose "[Parse-HXAcquisition] Proccesing $File"
 
         # Timestamp calculation:
-        $timestamp = Get-Date -Format o | foreach {$_ -replace ":", "."}
+        $timestamp = Get-Date -Format o | ForEach-Object {$_ -replace ":", "."}
 
         # Controller name:
         $controller = [string](([regex]::Match($Uri,"https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)

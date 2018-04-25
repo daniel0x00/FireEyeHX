@@ -1,4 +1,4 @@
-function Download-HXBulkAcquisition {
+function Invoke-HXDownloadAcquisition {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(    

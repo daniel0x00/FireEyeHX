@@ -1,4 +1,4 @@
-function Get-HXHostSet {
+function Find-HXHostSet {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(    

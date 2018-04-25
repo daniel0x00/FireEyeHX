@@ -1,4 +1,4 @@
-function Get-HXBulkAcquisition {
+function Find-HXBulkAcquisition {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(    
