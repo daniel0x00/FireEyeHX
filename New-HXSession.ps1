@@ -28,9 +28,9 @@ function New-HXSession {
             }
 
             # Make the request to the controller:
-            $WebRequest = Invoke-WebRequest -Uri $Endpoint -Method Get -SessionVariable LoginSession -ErrorAction Stop -Headers $headers 
+            $WebRequest = Invoke-WebRequest -Uri $Endpoint -Method Get -SessionVariable LoginSession -ErrorAction Stop -Headers $headers -SkipCertificateCheck
 
-            $TokenSession = $WebRequest.Headers['X-FeApi-Token']
+            $TokenSession = $WebRequest.Headers.'X-FeApi-Token' | out-string
             if ($TokenSession -eq $null) { throw "Login token not observed in the authentication response." }
             
             # Return the object:

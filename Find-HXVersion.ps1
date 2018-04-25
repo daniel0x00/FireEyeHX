@@ -31,7 +31,7 @@ function Get-HXVersion {
         if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
 
         # Request:
-        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers
+        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers -SkipCertificateCheck
         $WebRequestContent = $WebRequest.Content | ConvertFrom-Json
 
         # Return the object:

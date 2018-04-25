@@ -64,11 +64,15 @@ function Download-HXBulkAcquisition {
         }
         else { $_path = $Path }
 
-        # Webclient object. Not using Invoke-WebRequest because the downloaded object is streamed into memory first, harming the performance of the script:
-        $wc = New-Object System.Net.WebClient
-        $wc.Headers.add('Accept','application/octet-stream')
-        $wc.Headers.add('X-FeApi-Token',$TokenSession)
-        $wc.DownloadFile($Endpoint, $_path)
+        # Webclient object.
+        $headers = @{ "Accept" = "application/octet-stream"; "X-FeApi-Token" = $TokenSession }
+        $null = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers -OutFile $_path -SkipCertificateCheck
+
+        # .net WebClient object way. Faster, but not compatible with self-signed certificates and PowerShell Core:
+        #$wc = New-Object System.Net.WebClient
+        #$wc.Headers.add('Accept','application/octet-stream')
+        #$wc.Headers.add('X-FeApi-Token',$TokenSession)
+        #$wc.DownloadFile($Endpoint, $_path)
 
         $out = New-Object System.Object
         $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
