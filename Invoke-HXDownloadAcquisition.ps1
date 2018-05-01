@@ -35,7 +35,7 @@ function Invoke-HXDownloadAcquisition {
         elseif ($Uri -match '\d/$') { $Endpoint = $Uri+$Acquisition }
 
         # Timestamp calculation:
-        $timestamp = Get-Date -Format o | foreach {$_ -replace ":", "."}
+        $timestamp = Get-Date -Format o | ForEach-Object {$_ -replace ":", "."}
 
         # Controller name:
         $controller = [string](([regex]::Match($Uri,"https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)
