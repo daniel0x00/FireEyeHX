@@ -1,5 +1,5 @@
 function Convert-HXAcquisition {
-    [CmdletBinding()]
+    
     [OutputType([psobject])]
     param(
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
@@ -21,6 +21,10 @@ function Convert-HXAcquisition {
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [ValidateScript({Test-Path $_})]
         [string] $BasePath
+
+        # TODO: multiples files of each type should be joined. E.g. files-api acquisitions of same host should be joined first before treatement. 
+        # TODO: Switch to clean up the 'raw' folder.
+        # TODO: Switch to create a resume .csv with all the host that were treated. Timestamps should be included (maybe timestamp of acquisition and timestamp of file generation).
     )
 
     begin { 
