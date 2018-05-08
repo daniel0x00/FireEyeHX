@@ -13,13 +13,7 @@ function Remove-HXBulkAcquisition {
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("bulkacquisition_id")]
-        [int] $BulkAcquisitionId,
-
-        [Parameter(Mandatory=$false)]
-        [switch] $Passthru,
-
-        [Parameter(Mandatory=$false)]
-        [switch] $Raw
+        [int] $BulkAcquisitionId
     )
 
     begin { }

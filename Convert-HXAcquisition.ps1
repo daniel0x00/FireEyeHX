@@ -23,7 +23,10 @@ function Convert-HXAcquisition {
         [string] $BasePath,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [switch] $ProduceLastSeenFile
+        [switch] $ProduceLastSeenFile,
+
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [switch] $DeleteRaw
 
         # TODO: multiples files of each type should be joined. E.g. files-api acquisitions of same host should be joined first before treatement. 
         # TODO: Switch to clean up the 'raw' folder.
@@ -197,6 +200,11 @@ function Convert-HXAcquisition {
                 $out | Export-Csv -NoTypeInformation -Encoding utf8 -NoOverwrite -Append -Path $_lastseenfile
             }
         }
+
+        # Check if the DeleteRaw switch is turn on:
+        if ($DeleteRaw) {
+            if (Test-Path $_file) { Remove-Item -Path $_file }
+        } 
     }
     end { }
 }
