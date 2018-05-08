@@ -20,11 +20,13 @@ function Convert-HXAcquisition {
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [ValidateScript({Test-Path $_})]
-        [string] $BasePath
+        [string] $BasePath,
+
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [switch] $ProduceLastSeenFile
 
         # TODO: multiples files of each type should be joined. E.g. files-api acquisitions of same host should be joined first before treatement. 
         # TODO: Switch to clean up the 'raw' folder.
-        # TODO: Switch to create a resume .csv with all the host that were treated. Timestamps should be included (maybe timestamp of acquisition and timestamp of file generation).
     )
 
     begin { 
@@ -66,17 +68,22 @@ function Convert-HXAcquisition {
         New-Item -ItemType Directory -Force -Path $_unique_path -ErrorAction Stop | Out-Null
         New-Item -ItemType Directory -Force -Path $_changes_path -ErrorAction Stop | Out-Null
         New-Item -ItemType Directory -Force -Path $_tmp_path -ErrorAction Stop | Out-Null
+
+        # Set-up the last-seen file:
+        $_generatedat = Get-Date -Format o | ForEach-Object {$_ -replace ":", "."}
+        $_lastseenfile = [System.IO.Path]::Combine($_changes_path, $_generatedat + $Separator + "lastseen.csv")
+        if (Test-Path $_lastseenfile) { Remove-Item -Path $_lastseenfile -ErrorAction Stop }
+
     }
     process {
 
-        Write-Verbose "[Parse-HXAcquisition] Proccesing $File"
+        Write-Verbose "[Convert-HXAcquisition] Proccesing $File"
 
         # Timestamp calculation:
         $timestamp = Get-Date -Format o | ForEach-Object {$_ -replace ":", "."}
 
         # Controller name:
         $controller = [string](([regex]::Match($Uri,"https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)
-
         
         # Check if the raw file is not in the raw folder. In case of positive, move it to the proper folder:
         if ([System.IO.Path]::GetDirectoryName($File) -ne $_raw_path) { 
@@ -95,7 +102,8 @@ function Convert-HXAcquisition {
             $_manifest_content = Get-Content $_manifest_file -Raw | ConvertFrom-Json
 
             # Process the manifest and rename the files when needed. Issues files will be deleted:
-            $_manifest_content.audits | ForEach-Object { 
+            $newseen_filenames = @()
+            $_manifest_content.audits | ForEach-Object {
                 $extractedfile_filetype = $_.generator
 
                 $_.results | ForEach-Object { 
@@ -142,18 +150,25 @@ function Convert-HXAcquisition {
                                 Move-Item -Path $_extractedfile_new_fullpath -Destination $_unique_fullpath 
                                 Copy-Item -Path $_unique_fullpath -Destination $_change_fullpath
 
-                                Write-Verbose "[Parse-HXAcquisition] New unmatch: $_extractedfile_new_filename"
+                                # Add the new seen file to an array that will be written down in the resume per hostname file (LastSeenFile).
+                                $newseen_filenames += $extractedfile_filetype
+
+                                Write-Verbose "[Convert-HXAcquisition] New unmatch: $_extractedfile_new_filename"
                             }
                             else { 
                                 Remove-Item -Path $_extractedfile_new_fullpath
-                                Write-Verbose "[Parse-HXAcquisition] No changes seen in file: $_extractedfile_new_filename"
+                                Write-Verbose "[Convert-HXAcquisition] No changes seen in file: $_extractedfile_new_filename"
                             }
                         }
                         # If not found in 'unique' folder, means it is the first time that file is being seen. So copy to file directly to the 'changes' folder:
                         else {
                             Move-Item -Path $_extractedfile_new_fullpath -Destination $_unique_fullpath 
                             Copy-Item -Path $_unique_fullpath -Destination $_change_fullpath
-                            Write-Verbose "[Parse-HXAcquisition] New seen file: $_extractedfile_new_filename"
+
+                            # Add the new seen file to an array that will be written down in the resume per hostname file (LastSeenFile).
+                            $newseen_filenames += $extractedfile_filetype
+
+                            Write-Verbose "[Convert-HXAcquisition] New seen file: $_extractedfile_new_filename"
                         }
                     }
 
@@ -167,6 +182,20 @@ function Convert-HXAcquisition {
 
             # Remove the manifest file in the 'tmp' folder:
             Remove-Item -Path $_manifest_file -ErrorAction Stop
+
+            # Check if we have to produce the seen file per host:
+            if ($ProduceLastSeenFile) {
+                $out = New-Object System.Object
+                $out | Add-Member -Type NoteProperty -Name controller -Value $controller
+                $out | Add-Member -Type NoteProperty -Name hostset -Value $Hostset
+                $out | Add-Member -Type NoteProperty -Name hostname -Value $Hostname
+                $out | Add-Member -Type NoteProperty -Name processedat -Value $_generatedat
+                $out | Add-Member -Type NoteProperty -Name seenat -Value $timestamp
+                $out | Add-Member -Type NoteProperty -Name newseenfile -Value (($newseen_filenames | Get-Unique) -join ', ')
+
+                # Export to CSV:
+                $out | Export-Csv -NoTypeInformation -Encoding utf8 -NoOverwrite -Append -Path $_lastseenfile
+            }
         }
     }
     end { }

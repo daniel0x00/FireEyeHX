@@ -1,4 +1,4 @@
-function New-HXBulkAcquisition {
+function Edit-HXBulkAcquisition {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(
@@ -12,16 +12,12 @@ function New-HXBulkAcquisition {
         [string] $TokenSession, 
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
-        [ValidateSet("win", "linux", "osx", "*")]
-        [string] $Platform,
+        [Alias("bulkacquisition_id")]
+        [int] $BulkAcquisitionId,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
-        [ValidateScript({Test-Path $_})]
-        [string] $Script,
-
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
-        [Alias("hostset_id")] 
-        [int] $HostsetId,
+        [ValidateSet("start", "stop", "refresh")]
+        [string] $Action,
 
         [Parameter(Mandatory=$false)]
         [switch] $Passthru,
@@ -34,20 +30,16 @@ function New-HXBulkAcquisition {
     process {
 
         # Uri filtering:
-        if ($Uri -match '\d$') { $Endpoint = $Uri+'/hx/api/v3/acqs/bulk' }
-        elseif ($Uri -match '\d/$') { $Endpoint = $Uri+'hx/api/v3/acqs/bulk' }
+        if ($Uri -match '\d$') { $Endpoint = $Uri+"/hx/api/v3/acqs/bulk/$BulkAcquisitionId/actions/$Action" }
+        elseif ($Uri -match '\d/$') { $Endpoint = $Uri+"hx/api/v3/acqs/bulk/$BulkAcquisitionId/actions/$Action" }
         else { $Endpoint = $Uri + "/?" }
 
         # Header:
         $headers = @{ "Accept" = "application/json" }
         if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
 
-        # Body:
-        $base64_script = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((Get-Content -Path $Script -Raw -Encoding utf8)))
-        $body = "{`"host_set`":{`"_id`":$HostsetId},`"scripts`":[{`"platform`":`"win`",`"b64`":`"$base64_script`"}],`"comment`":`"PSAutomaticBulkAcquisition`"}"
-
         # Request:
-        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Post -Headers $headers -Body $body -SkipCertificateCheck -ContentType "application/json"
+        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Post -Headers $headers -SkipCertificateCheck
         $WebRequestContent = $WebRequest.Content | ConvertFrom-Json
 
 

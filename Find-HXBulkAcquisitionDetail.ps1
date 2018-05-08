@@ -24,7 +24,7 @@ function Find-HXBulkAcquisitionDetail {
         [string] $Filter,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
-        [Alias("bulk_id")] 
+        [Alias("bulkacquisition_id")] 
         [string] $BulkAcquisitionId,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
@@ -64,7 +64,7 @@ function Find-HXBulkAcquisitionDetail {
         if (-not($Raw)) {
             $WebRequestContent.data.entries | Foreach-Object {
                 $out = New-Object System.Object
-                $out | Add-Member -Type NoteProperty -Name bulk_id -Value $_.bulk_acq._id
+                $out | Add-Member -Type NoteProperty -Name bulkacquisition_id -Value $_.bulk_acq._id
                 if ($Hostset) { $out | Add-Member -Type NoteProperty -Name hostset -Value $Hostset } 
                 $out | Add-Member -Type NoteProperty -Name revision -Value $_._revision
                 $out | Add-Member -Type NoteProperty -Name complete_at -Value $_.complete_at

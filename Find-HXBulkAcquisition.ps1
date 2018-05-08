@@ -53,7 +53,7 @@ function Find-HXBulkAcquisition {
         if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
 
         # Enable auto-search by a given host-set id:
-        if ($HostsetId) { $Search = $HostsetId }
+        if (($HostsetId) -and (-not($Search))) { $Search = $HostsetId }
 
         if ($Search) { $Endpoint = $Endpoint + "&search=" + $Search }
         if ($Offset) { $Endpoint = $Endpoint + "&offset=" + $Offset }
@@ -70,7 +70,7 @@ function Find-HXBulkAcquisition {
         if (-not($Raw)) {
             $WebRequestContent.data.entries | Foreach-Object {
                 $out = New-Object System.Object
-                $out | Add-Member -Type NoteProperty -Name bulk_id -Value $_._id
+                $out | Add-Member -Type NoteProperty -Name bulkacquisition_id -Value $_._id
                 if ($Hostset) { $out | Add-Member -Type NoteProperty -Name hostset -Value $Hostset } 
                 $out | Add-Member -Type NoteProperty -Name revision -Value $_._revision
                 $out | Add-Member -Type NoteProperty -Name comment -Value $_.comment
