@@ -29,7 +29,6 @@ function Convert-HXAcquisition {
         [switch] $DeleteRaw
 
         # TODO: multiples files of each type should be joined. E.g. files-api acquisitions of same host should be joined first before treatement. 
-        # TODO: Switch to clean up the 'raw' folder.
     )
 
     begin { 
@@ -78,6 +77,7 @@ function Convert-HXAcquisition {
         if (Test-Path $_lastseenfile) { Remove-Item -Path $_lastseenfile -ErrorAction Stop }
 
     }
+
     process {
 
         Write-Verbose "[Convert-HXAcquisition] Proccesing $File"
@@ -91,7 +91,7 @@ function Convert-HXAcquisition {
         # Check if the raw file is not in the raw folder. In case of positive, move it to the proper folder:
         if ([System.IO.Path]::GetDirectoryName($File) -ne $_raw_path) { 
             $_file = [System.IO.Path]::Combine($_raw_path, [System.IO.Path]::GetFileName($File))
-            Move-Item -Path $File -Destination $_file -ErrorAction Stop -Verbose -Force
+            Move-Item -Path $File -Destination $_file -ErrorAction Stop -Force
         }
         else { $_file = $File }
 
