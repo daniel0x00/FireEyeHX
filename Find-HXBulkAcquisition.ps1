@@ -28,10 +28,10 @@ function Find-HXBulkAcquisition {
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [Alias("hostset_id")] 
-        [string] $HostsetId,
+        [string] $HostSetId,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Hostset,
+        [string] $HostSet,
 
         [Parameter(Mandatory=$false)]
         [switch] $Passthru,
