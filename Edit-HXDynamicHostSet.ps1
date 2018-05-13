@@ -1,4 +1,4 @@
-function Set-HXDynamicHostSet {
+function Edit-HXDynamicHostSet {
     [CmdletBinding()]
     [OutputType([psobject])]
     param(    
