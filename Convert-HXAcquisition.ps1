@@ -53,7 +53,8 @@ function Convert-HXAcquisition {
             [OutputType([psobject])]
             param(
                 [Parameter(Mandatory = $true, ValueFromPipeline = $false, Position = 0)]
-                [psobject] $ManifestFile
+                [ValidateScript({Test-Path $_})]
+                [string] $ManifestFile
             )
         
             # Get the directory of the manifest file:
@@ -62,7 +63,7 @@ function Convert-HXAcquisition {
             # Read the file content and convert it into a JSON object:
             $unique_xml = $null
             $unique_xml_file_fullpath = $null
-            $_manifest_content = Get-Content $ManifestFile -Raw | ConvertFrom-Json
+            $_manifest_content = Get-Content -Path $ManifestFile -Raw | ConvertFrom-Json
             $_manifest_content.audits | Group-Object generator | Where-Object {$_.Count -gt 1} | Select-Object -ExpandProperty Group `
                 | ForEach-Object { $_.results } | Group-Object type | Where-Object { $_.name -eq 'application/xml' } `
                 | Where-Object {$_.Count -gt 1} | Select-Object -ExpandProperty Group | ForEach-Object {
@@ -74,7 +75,7 @@ function Convert-HXAcquisition {
                 if (-not($unique_xml -eq $null)) {
                         
                     # Import the second-onwards xml:
-                    [xml]$secondxml = Get-Content -Path $file_fullpath
+                    [xml]$secondxml = Get-Content -Path $file_fullpath -Raw
         
                     # Parse the xml of the second-onwards element in the ForEach-Object (acquisitions):
                     foreach ($node in $secondxml.DocumentElement.ChildNodes) {
@@ -88,7 +89,7 @@ function Convert-HXAcquisition {
         
                 # Check if the $unique_xml is null, so means it is the first element of the ForEach-Object that is being treated. 
                 if ($unique_xml -eq $null) {
-                    [xml]$unique_xml = Get-Content -Path $file_fullpath
+                    [xml]$unique_xml = Get-Content -Path $file_fullpath -Raw
                     $unique_xml_file_fullpath = $file_fullpath
                 }
             }
@@ -97,6 +98,52 @@ function Convert-HXAcquisition {
             if (-not($unique_xml -eq $null)) {
                 $unique_xml.Save($unique_xml_file_fullpath)
             }
+        }
+
+        function Remove-HXAcquisitionEmptyFile {
+            <#
+            .Description
+                Merge an acquisition file which does not contain any value
+            #>
+            [CmdletBinding()]
+            [OutputType([psobject])]
+            param(
+                [Parameter(Mandatory = $true, ValueFromPipeline = $false, Position = 0)]
+                [ValidateScript({Test-Path $_})]
+                [string] $AcquisitionFile
+            )
+        
+            # Get the directory of the manifest file:
+            [xml]$xml = Get-Content -Path $AcquisitionFile -Raw
+        
+            # Check if the count of child objects is 0, so we can delete the file:
+            if ($xml.DocumentElement.ChildNodes.Count -eq 0) {
+                 # Delete the xml file:
+                 Remove-Item -Path $AcquisitionFile
+            }
+        }
+
+        function TrimState {
+            <#
+            .Description
+                Remove all timestamps and state indicators in a string
+            #>
+            [CmdletBinding()]
+            [OutputType([string])]
+            param(
+                [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
+                [string] $String,
+        
+                [Parameter(Mandatory = $false, ValueFromPipeline = $false, Position = 0)]
+                [string] $SubstituteString='ReplacedByPSAutomaticBulkAcquisitionScript'
+            )
+        
+            $String `
+                -replace '<status>[\w]+</status>', "<status>$SubstituteString</status>" `
+                -replace '<pid>[\d]+</pid>', "<pid>$SubstituteString</pid>" `
+                -replace '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', "$SubstituteString" `
+                -replace '>PT[\w]+S<', ">$SubstituteString<" `
+                | Out-String -NoNewline
         }
 
         # Set the folders where to operate.
@@ -158,7 +205,7 @@ function Convert-HXAcquisition {
             Merge-HXAcquisition -ManifestFile $_manifest_file
 
             # Retrieve the content of the manifest file:
-            $_manifest_content = Get-Content $_manifest_file -Raw | ConvertFrom-Json
+            $_manifest_content = Get-Content -Path $_manifest_file -Raw | ConvertFrom-Json
 
             # Process the manifest and rename the files when needed. Issues files will be deleted:
             $newseen_filenames = @()
@@ -172,8 +219,13 @@ function Convert-HXAcquisition {
                     # Process the file if it is a xml:
                     if ($extractedfile_contenttype -eq 'application/xml') {
 
-                        # Check if the file of the acquisition exists. May not exists due to a merge of file done by Merge-HXAcquisition:
+                        # File being processed:
                         $_extractedfile = [System.IO.Path]::Combine($_tmp_path, $extractedfile_name)
+
+                        # Remove empty files. File exists needs to be checked because may be deleted first by Merge-HXAcquisition as a result of a merge files of the same type.
+                        if (Test-Path $_extractedfile) { Remove-HXAcquisitionEmptyFile -AcquisitionFile $_extractedfile }
+
+                        # Check if the file of the acquisition exists. May not exists due to a merge of file done by Merge-HXAcquisition:
                         if (Test-Path $_extractedfile) {
                             # Rename the file:
                             $_extractedfile_new_fullpath = [System.IO.Path]::Combine($_tmp_path, $controller + $Separator + $Hostset + $Separator + $Hostname + $Separator + $extractedfile_filetype + ".xml")
@@ -185,13 +237,13 @@ function Convert-HXAcquisition {
                             #  Goal is to remove the te timestamps into the file, so we can make the file uniqueness and can compare an old file of the same host against the new one by MD5 hash. 
                             #  XML attributes 'created' and 'uid' will be removed from the files:
 
-                            (Get-Content $_extractedfile_new_fullpath -Raw -Encoding UTF8) `
+                            (Get-Content -Path $_extractedfile_new_fullpath -Raw -Encoding UTF8) `
                                 -replace 'created="[\w\-:]+"', "controller=`"$controller`" hostset=`"$Hostset`" hostname=`"$Hostname`"" `
                                 -replace 'uid="[\w\-]+"', '' `
-                                | Out-File $_extractedfile_new_fullpath -Encoding UTF8
+                                | TrimState | Out-File $_extractedfile_new_fullpath -Encoding UTF8
 
 
-                            # Check if the extracted file matchs with it pair in the 'unique' folder. 
+                            # Now will check if the extracted file matchs with its pair in the 'unique' folder. 
                             #  In case of negative, it will be pushed to the 'changes' folder. 
                             #  In case of positive, it means there is no change into the file, so nothing will happens.
 
