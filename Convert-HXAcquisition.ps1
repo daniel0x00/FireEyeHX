@@ -2,30 +2,30 @@ function Convert-HXAcquisition {
     
     [OutputType([psobject])]
     param(
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Uri='undefined',
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [string] $Uri = 'undefined',
 
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
-        [ValidateScript({Test-Path $_})]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateScript( {Test-Path $_})]
         [string] $File,
 
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [string] $Hostname,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Hostset='undefined',
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [string] $Hostset = 'undefined',
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Separator='~',
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [string] $Separator = '~',
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [ValidateScript({Test-Path $_})]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [ValidateScript( {Test-Path $_})]
         [string] $BasePath,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [switch] $ProduceLastSeenFile,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [switch] $DeleteRaw
 
         # TODO: multiples files of each type should be joined. E.g. files-api acquisitions of same host should be joined first before treatement. 
@@ -33,18 +33,71 @@ function Convert-HXAcquisition {
 
     begin { 
         Add-Type -AssemblyName System.IO.Compression.FileSystem
-        function Unzip
-        {
+        function Unzip {
             param(
-                [Parameter(Mandatory=$true, Position=0)]
-                [ValidateScript({Test-Path $_})]
+                [Parameter(Mandatory = $true, Position = 0)]
+                [ValidateScript( {Test-Path $_})]
                 [string]$ZipFile,
 
-                [Parameter(Mandatory=$true, Position=1)]
+                [Parameter(Mandatory = $true, Position = 1)]
                 [string]$OutPath
             )
 
             [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipFile, $OutPath)
+        }
+
+        function Merge-HXAcquisition {
+            <#
+            .Description
+                Merge all acquisitions of the same type associated with the same host. 
+            #>
+            [CmdletBinding()]
+            [OutputType([psobject])]
+            param(
+                [Parameter(Mandatory = $true, ValueFromPipeline = $false, Position = 0)]
+                [psobject] $ManifestFile
+            )
+        
+            # Get the directory of the manifest file:
+            $_manifest_firectory = [System.IO.Path]::GetDirectoryName($ManifestFile)
+        
+            # Read the file content and convert it into a JSON object:
+            $unique_xml = $null
+            $unique_xml_file_fullpath = $null
+            $_manifest_content = Get-Content $ManifestFile -Raw | ConvertFrom-Json
+            $_manifest_content.audits | Group-Object generator | Where-Object {$_.Count -gt 1} | Select-Object -ExpandProperty Group `
+                | ForEach-Object { $_.results } | Group-Object type | Where-Object { $_.name -eq 'application/xml' } `
+                | Where-Object {$_.Count -gt 1} | Select-Object -ExpandProperty Group | ForEach-Object {
+                    
+                # Full path of the acquisition:
+                $file_fullpath = [System.IO.Path]::Combine($_manifest_firectory, $_.payload)
+        
+                # First check if the $unique_xml is not null, so we're not treating the first element.
+                if (-not($unique_xml -eq $null)) {
+                        
+                    # Import the second-onwards xml:
+                    [xml]$secondxml = Get-Content -Path $file_fullpath
+        
+                    # Parse the xml of the second-onwards element in the ForEach-Object (acquisitions):
+                    foreach ($node in $secondxml.DocumentElement.ChildNodes) {
+                        $unique_xml.DocumentElement.AppendChild($unique_xml.ImportNode($node, $true)) | Out-Null
+                    }
+        
+                    # Delete the second xml file:
+                    Remove-Item -Path $file_fullpath
+                }
+        
+                # Check if the $unique_xml is null, so means it is the first element of the ForEach-Object that is being treated. 
+                if ($unique_xml -eq $null) {
+                    [xml]$unique_xml = Get-Content -Path $file_fullpath
+                    $unique_xml_file_fullpath = $file_fullpath
+                }
+            }
+        
+            # Save the merged xml into the first file which was treated:
+            if (-not($unique_xml -eq $null)) {
+                $unique_xml.Save($unique_xml_file_fullpath)
+            }
         }
 
         # Set the folders where to operate.
@@ -86,7 +139,7 @@ function Convert-HXAcquisition {
         $timestamp = Get-Date -Format o | ForEach-Object {$_ -replace ":", "."}
 
         # Controller name:
-        $controller = [string](([regex]::Match($Uri,"https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)
+        $controller = [string](([regex]::Match($Uri, "https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)
         
         # Check if the raw file is not in the raw folder. In case of positive, move it to the proper folder:
         if ([System.IO.Path]::GetDirectoryName($File) -ne $_raw_path) { 
@@ -101,6 +154,10 @@ function Convert-HXAcquisition {
         # Verify if the 'manifest.json' exists and parse it:
         $_manifest_file = [System.IO.Path]::Combine($_tmp_path, 'manifest.json')
         if (Test-Path $_manifest_file) {
+
+            ## Call Merge-HXAcquisition to merge all acquisitions of the same type
+            Merge-HXAcquisition -ManifestFile $_manifest_file
+
             # Retrieve the content of the manifest file:
             $_manifest_content = Get-Content $_manifest_file -Raw | ConvertFrom-Json
 
@@ -116,62 +173,65 @@ function Convert-HXAcquisition {
                     # Process the file if it is a xml:
                     if ($extractedfile_contenttype -eq 'application/xml') {
 
-                        # Rename the file:
+                        # Check if the file of the acquisition exists. May not exists due to a merge of file done by Merge-HXAcquisition:
                         $_extractedfile = [System.IO.Path]::Combine($_tmp_path, $extractedfile_name)
-                        $_extractedfile_new_fullpath = [System.IO.Path]::Combine($_tmp_path, $controller + $Separator + $Hostset + $Separator + $Hostname + $Separator + $extractedfile_filetype + ".xml")
-                        $_extractedfile_new_filename = [System.IO.Path]::GetFileName($_extractedfile_new_fullpath)
-                        Move-Item -Path $_extractedfile -Destination $_extractedfile_new_fullpath -ErrorAction Stop
+                        if (Test-Path $_extractedfile) {
+                            # Rename the file:
+                            $_extractedfile_new_fullpath = [System.IO.Path]::Combine($_tmp_path, $controller + $Separator + $Hostset + $Separator + $Hostname + $Separator + $extractedfile_filetype + ".xml")
+                            $_extractedfile_new_filename = [System.IO.Path]::GetFileName($_extractedfile_new_fullpath)
+                            Move-Item -Path $_extractedfile -Destination $_extractedfile_new_fullpath -ErrorAction Stop
 
 
-                        # Process the file once extracted. 
-                        #  Goal is to remove the te timestamps into the file, so we can make the file uniqueness and can compare an old file of the same host against the new one by MD5 hash. 
-                        #  XML attributes 'created' and 'uid' will be removed from the files:
+                            # Process the file once extracted. 
+                            #  Goal is to remove the te timestamps into the file, so we can make the file uniqueness and can compare an old file of the same host against the new one by MD5 hash. 
+                            #  XML attributes 'created' and 'uid' will be removed from the files:
 
-                        (Get-Content $_extractedfile_new_fullpath -Raw -Encoding UTF8) `
-                            -replace 'created="[\w\-:]+"', "controller=`"$controller`" hostset=`"$Hostset`" hostname=`"$Hostname`"" `
-                            -replace 'uid="[\w\-]+"', '' `
-                            | Out-File $_extractedfile_new_fullpath -Encoding UTF8
-
-
-                        # Check if the extracted file matchs with it pair in the 'unique' folder. 
-                        #  In case of negative, it will be pushed to the 'changes' folder. 
-                        #  In case of positive, it means there is no change into the file, so nothing will happens.
+                            (Get-Content $_extractedfile_new_fullpath -Raw -Encoding UTF8) `
+                                -replace 'created="[\w\-:]+"', "controller=`"$controller`" hostset=`"$Hostset`" hostname=`"$Hostname`"" `
+                                -replace 'uid="[\w\-]+"', '' `
+                                | Out-File $_extractedfile_new_fullpath -Encoding UTF8
 
 
-                        # Set required file paths:
-                        $_unique_fullpath = [System.IO.Path]::Combine($_unique_path, $controller + $Separator + $Hostset + $Separator + $Hostname + $Separator + $extractedfile_filetype + ".xml")
-                        $_change_fullpath = [System.IO.Path]::Combine($_changes_path, $timestamp + $Separator + $controller + $Separator + $Hostset + $Separator + $Hostname + $Separator + $extractedfile_filetype + ".xml")
+                            # Check if the extracted file matchs with it pair in the 'unique' folder. 
+                            #  In case of negative, it will be pushed to the 'changes' folder. 
+                            #  In case of positive, it means there is no change into the file, so nothing will happens.
 
-                        # Check if file exists in the 'unique' folder:
-                        if (Test-Path $_unique_fullpath) {
 
-                            # Check if the extracted file match with the previous version seen in the 'unique' folder:
-                            # In case of not matching, it will move the extracted version to the 'changes' folder and it will replace the 'unique' version with the version recently extracted. 
-                            if ((Get-FileHash $_extractedfile_new_fullpath -Algorithm MD5).hash -ne (Get-FileHash $_unique_fullpath -Algorithm MD5).hash) {
+                            # Set required file paths:
+                            $_unique_fullpath = [System.IO.Path]::Combine($_unique_path, $controller + $Separator + $Hostset + $Separator + $Hostname + $Separator + $extractedfile_filetype + ".xml")
+                            $_change_fullpath = [System.IO.Path]::Combine($_changes_path, $timestamp + $Separator + $controller + $Separator + $Hostset + $Separator + $Hostname + $Separator + $extractedfile_filetype + ".xml")
 
-                                Remove-Item -Path $_unique_fullpath -ErrorAction Stop
+                            # Check if file exists in the 'unique' folder:
+                            if (Test-Path $_unique_fullpath) {
+
+                                # Check if the extracted file match with the previous version seen in the 'unique' folder:
+                                # In case of not matching, it will move the extracted version to the 'changes' folder and it will replace the 'unique' version with the version recently extracted. 
+                                if ((Get-FileHash $_extractedfile_new_fullpath -Algorithm MD5).hash -ne (Get-FileHash $_unique_fullpath -Algorithm MD5).hash) {
+
+                                    Remove-Item -Path $_unique_fullpath -ErrorAction Stop
+                                    Move-Item -Path $_extractedfile_new_fullpath -Destination $_unique_fullpath 
+                                    Copy-Item -Path $_unique_fullpath -Destination $_change_fullpath
+
+                                    # Add the new seen file to an array that will be written down in the resume per hostname file (LastSeenFile).
+                                    $newseen_filenames += $extractedfile_filetype
+
+                                    Write-Verbose "[Convert-HXAcquisition] New unmatch: $_extractedfile_new_filename"
+                                }
+                                else { 
+                                    Remove-Item -Path $_extractedfile_new_fullpath
+                                    Write-Verbose "[Convert-HXAcquisition] No changes seen in file: $_extractedfile_new_filename"
+                                }
+                            }
+                            # If not found in 'unique' folder, means it is the first time that file is being seen. So copy to file directly to the 'changes' folder:
+                            else {
                                 Move-Item -Path $_extractedfile_new_fullpath -Destination $_unique_fullpath 
                                 Copy-Item -Path $_unique_fullpath -Destination $_change_fullpath
 
                                 # Add the new seen file to an array that will be written down in the resume per hostname file (LastSeenFile).
                                 $newseen_filenames += $extractedfile_filetype
 
-                                Write-Verbose "[Convert-HXAcquisition] New unmatch: $_extractedfile_new_filename"
+                                Write-Verbose "[Convert-HXAcquisition] New seen file: $_extractedfile_new_filename"
                             }
-                            else { 
-                                Remove-Item -Path $_extractedfile_new_fullpath
-                                Write-Verbose "[Convert-HXAcquisition] No changes seen in file: $_extractedfile_new_filename"
-                            }
-                        }
-                        # If not found in 'unique' folder, means it is the first time that file is being seen. So copy to file directly to the 'changes' folder:
-                        else {
-                            Move-Item -Path $_extractedfile_new_fullpath -Destination $_unique_fullpath 
-                            Copy-Item -Path $_unique_fullpath -Destination $_change_fullpath
-
-                            # Add the new seen file to an array that will be written down in the resume per hostname file (LastSeenFile).
-                            $newseen_filenames += $extractedfile_filetype
-
-                            Write-Verbose "[Convert-HXAcquisition] New seen file: $_extractedfile_new_filename"
                         }
                     }
 
