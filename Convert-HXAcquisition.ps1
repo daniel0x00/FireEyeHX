@@ -27,8 +27,6 @@ function Convert-HXAcquisition {
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
         [switch] $DeleteRaw
-
-        # TODO: multiples files of each type should be joined. E.g. files-api acquisitions of same host should be joined first before treatement. 
     )
 
     begin { 
@@ -85,6 +83,7 @@ function Convert-HXAcquisition {
         
                     # Delete the second xml file:
                     Remove-Item -Path $file_fullpath
+
                 }
         
                 # Check if the $unique_xml is null, so means it is the first element of the ForEach-Object that is being treated. 
