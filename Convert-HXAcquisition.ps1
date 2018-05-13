@@ -26,7 +26,10 @@ function Convert-HXAcquisition {
         [switch] $ProduceLastSeenFile,
 
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
-        [switch] $DeleteRaw
+        [switch] $DeleteRaw,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [switch] $TrimState
     )
 
     begin { 
@@ -53,7 +56,7 @@ function Convert-HXAcquisition {
             [OutputType([psobject])]
             param(
                 [Parameter(Mandatory = $true, ValueFromPipeline = $false, Position = 0)]
-                [ValidateScript({Test-Path $_})]
+                [ValidateScript( {Test-Path $_})]
                 [string] $ManifestFile
             )
         
@@ -109,7 +112,7 @@ function Convert-HXAcquisition {
             [OutputType([psobject])]
             param(
                 [Parameter(Mandatory = $true, ValueFromPipeline = $false, Position = 0)]
-                [ValidateScript({Test-Path $_})]
+                [ValidateScript( {Test-Path $_})]
                 [string] $AcquisitionFile
             )
         
@@ -118,8 +121,8 @@ function Convert-HXAcquisition {
         
             # Check if the count of child objects is 0, so we can delete the file:
             if ($xml.DocumentElement.ChildNodes.Count -eq 0) {
-                 # Delete the xml file:
-                 Remove-Item -Path $AcquisitionFile
+                # Delete the xml file:
+                Remove-Item -Path $AcquisitionFile
             }
         }
 
@@ -133,17 +136,27 @@ function Convert-HXAcquisition {
             param(
                 [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
                 [string] $String,
+
+                [Parameter(Mandatory = $false, ValueFromPipeline = $false)]
+                [bool] $Enabled = $true,
         
                 [Parameter(Mandatory = $false, ValueFromPipeline = $false, Position = 0)]
-                [string] $SubstituteString='ReplacedByPSAutomaticBulkAcquisitionScript'
+                [string] $SubstituteString = 'ReplacedByPSAutomaticBulkAcquisitionScript'
             )
-        
-            $String `
-                -replace '<status>[\w]+</status>', "<status>$SubstituteString</status>" `
-                -replace '<pid>[\d]+</pid>', "<pid>$SubstituteString</pid>" `
-                -replace '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', "$SubstituteString" `
-                -replace '>PT[\w]+S<', ">$SubstituteString<" `
-                | Out-String -NoNewline
+            if ($Enabled) {
+                $String `
+                    -replace '<status>[\w]+</status>', "<status>$SubstituteString</status>" `
+                    -replace '<pid>[\d]+</pid>', "<pid>$SubstituteString</pid>" `
+                    -replace '<parentpid>[\d]+</parentpid>', "<parentpid>$SubstituteString</parentpid>" `
+                    -replace '<totalphysical>[\d]+</totalphysical>', "<totalphysical>$SubstituteString</totalphysical>" `
+                    -replace '<availphysical>[\d]+</availphysical>', "<availphysical>$SubstituteString</availphysical>" `
+                    -replace '<lpcDevice>.+<\/lpcDevice>', "<lpcDevice>$SubstituteString</lpcDevice>" `
+                    -replace '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', "$SubstituteString" `
+                    -replace '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z', "$SubstituteString" `
+                    -replace '>PT[\w]+S<', ">$SubstituteString<" `
+                    | Out-String -NoNewline
+            }
+            else { $String | Out-String -NoNewline }
         }
 
         # Set the folders where to operate.
@@ -175,14 +188,14 @@ function Convert-HXAcquisition {
         $_lastseenfile = [System.IO.Path]::Combine($_changes_path, $_generatedat + $Separator + "lastseen.csv")
         if (Test-Path $_lastseenfile) { Remove-Item -Path $_lastseenfile -ErrorAction Stop }
 
+        # Set-up timestamp for files acquired:
+        $timestamp = $_generatedat
+
     }
 
     process {
 
         Write-Verbose "[Convert-HXAcquisition] Proccesing $File"
-
-        # Timestamp calculation:
-        $timestamp = Get-Date -Format o | ForEach-Object {$_ -replace ":", "."}
 
         # Controller name:
         $controller = [string](([regex]::Match($Uri, "https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)
@@ -239,8 +252,9 @@ function Convert-HXAcquisition {
 
                             (Get-Content -Path $_extractedfile_new_fullpath -Raw -Encoding UTF8) `
                                 -replace 'created="[\w\-:]+"', "controller=`"$controller`" hostset=`"$Hostset`" hostname=`"$Hostname`"" `
+                                -replace 'sequence_num="[\d]+"', "controller=`"$controller`" hostset=`"$Hostset`" hostname=`"$Hostname`"" `
                                 -replace 'uid="[\w\-]+"', '' `
-                                | TrimState | Out-File $_extractedfile_new_fullpath -Encoding UTF8
+                                | TrimState -Enabled $TrimState | Out-File $_extractedfile_new_fullpath -Encoding UTF8
 
 
                             # Now will check if the extracted file matchs with its pair in the 'unique' folder. 
@@ -303,7 +317,6 @@ function Convert-HXAcquisition {
                 $out | Add-Member -Type NoteProperty -Name controller -Value $controller
                 $out | Add-Member -Type NoteProperty -Name hostset -Value $Hostset
                 $out | Add-Member -Type NoteProperty -Name hostname -Value $Hostname
-                $out | Add-Member -Type NoteProperty -Name processedat -Value $_generatedat
                 $out | Add-Member -Type NoteProperty -Name seenat -Value $timestamp
                 $out | Add-Member -Type NoteProperty -Name newseenfile -Value (($newseen_filenames | Get-Unique) -join ', ')
 
