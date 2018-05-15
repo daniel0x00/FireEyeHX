@@ -64,47 +64,55 @@ function Convert-HXAcquisition {
             $_manifest_firectory = [System.IO.Path]::GetDirectoryName($ManifestFile)
         
             # Read the file content and convert it into a JSON object:
-            $unique_xml = $null
-            $unique_xml_file_fullpath = $null
             $_manifest_content = Get-Content -Path $ManifestFile -Raw -ErrorAction Stop | ConvertFrom-Json
-            $_manifest_content.audits | Group-Object generator | Where-Object {$_.Count -gt 1} | Select-Object -ExpandProperty Group `
-                | ForEach-Object { $_.results } | Group-Object type | Where-Object { $_.name -eq 'application/xml' } `
-                | Where-Object {$_.Count -gt 1} | Select-Object -ExpandProperty Group | ForEach-Object {
-                    
-                # Full path of the acquisition:
-                $file_fullpath = [System.IO.Path]::Combine($_manifest_firectory, $_.payload)
+            $_manifest_content.audits | Group-Object generator | Where-Object {$_.Count -gt 1} | ForEach-Object {
+                $unique_xml = $null
+                $unique_xml_file_fullpath = $null
+                
+                #$file_type = $_.Name
         
-                # First check if the $unique_xml is not null, so we're not treating the first element.
-                if (-not($unique_xml -eq $null)) {
+                $_.Group | ForEach-Object {
+                    $_.results | ForEach-Object {
+                        
+        
+                        # Full path of the acquisition:
+                        $file_fullpath = [System.IO.Path]::Combine($_manifest_firectory, $_.payload)
+                        $acquisition_outcome_type = $_.type
+        
+                        if ($acquisition_outcome_type -eq 'application/xml') {
+                            if (-not($unique_xml -eq $null)) {
                     
-                    try {
-                        # Import the second-onwards xml:
-                        [xml]$secondxml = Get-Content -Path $file_fullpath -Raw #-ErrorAction SilentlyContinue # BUG: FireEyeHX has a bug where sometimes the acquired xml file doesnt contain a closed tag for the itemList xml item.
-            
-                        # Parse the xml of the second-onwards element in the ForEach-Object (acquisitions):
-                        foreach ($node in $secondxml.DocumentElement.ChildNodes) {
-                            $unique_xml.DocumentElement.AppendChild($unique_xml.ImportNode($node, $true)) | Out-Null
+                                try {
+                                    # Import the second-onwards xml:
+                                    [xml]$secondxml = Get-Content -Path $file_fullpath -Raw #-ErrorAction SilentlyContinue # BUG: FireEyeHX has a bug where sometimes the acquired xml file doesnt contain a closed tag for the itemList xml item.
+                    
+                                    # Parse the xml of the second-onwards element in the ForEach-Object (acquisitions):
+                                    foreach ($node in $secondxml.DocumentElement.ChildNodes) {
+                                        $unique_xml.DocumentElement.AppendChild($unique_xml.ImportNode($node, $true)) | Out-Null
+                                    }
+                    
+                                    # Delete the second xml file:
+                                    Remove-Item -Path $file_fullpath
+                                }
+                                catch { Write-Verbose "[Merge-HXAcquisition] Cannot merge $file_fullpath. File skipped." }
+                            }
+                
+                            # Check if the $unique_xml is null, so means it is the first element of the ForEach-Object that is being treated. 
+                            if ($unique_xml -eq $null) {
+                                try {
+                                    [xml]$unique_xml = Get-Content -Path $file_fullpath -Raw #-ErrorAction SilentlyContinue # BUG: FireEyeHX has a bug where sometimes the acquired xml file doesnt contain a closed tag for the itemList xml item.
+                                    $unique_xml_file_fullpath = $file_fullpath
+                                }
+                                catch { Write-Verbose "[Merge-HXAcquisition] Cannot merge $file_fullpath. File skipped." }
+                            }
                         }
-            
-                        # Delete the second xml file:
-                        Remove-Item -Path $file_fullpath
                     }
-                    catch { Write-Verbose "[Merge-HXAcquisition] Cannot merge $file_fullpath. File skipped." }
                 }
-        
-                # Check if the $unique_xml is null, so means it is the first element of the ForEach-Object that is being treated. 
-                if ($unique_xml -eq $null) {
-                    try {
-                        [xml]$unique_xml = Get-Content -Path $file_fullpath -Raw #-ErrorAction SilentlyContinue # BUG: FireEyeHX has a bug where sometimes the acquired xml file doesnt contain a closed tag for the itemList xml item.
-                        $unique_xml_file_fullpath = $file_fullpath
-                    }
-                    catch { Write-Verbose "[Merge-HXAcquisition] Cannot merge $file_fullpath. File skipped." }
+                
+                # Save the merged xml into the first file which was treated:
+                if (-not($unique_xml -eq $null)) {
+                    $unique_xml.Save($unique_xml_file_fullpath)
                 }
-            }
-        
-            # Save the merged xml into the first file which was treated:
-            if (-not($unique_xml -eq $null)) {
-                $unique_xml.Save($unique_xml_file_fullpath)
             }
         }
 
@@ -155,8 +163,9 @@ function Convert-HXAcquisition {
                     -replace '<pid>[\d]+</pid>', "<pid>$SubstituteString</pid>" `
                     -replace '<parentpid>[\d]+</parentpid>', "<parentpid>$SubstituteString</parentpid>" `
                     -replace '<totalphysical>[\d]+</totalphysical>', "<totalphysical>$SubstituteString</totalphysical>" `
-                    -replace '<availphysical>[\d]+</availphysical>', "<availphysical>$SubstituteString</availphysical>" `
+                    -replace '<ExitCode>[\d]+</ExitCode>', "<ExitCode>$SubstituteString</ExitCode>" `
                     -replace '<lpcDevice>.+<\/lpcDevice>', "<lpcDevice>$SubstituteString</lpcDevice>" `
+                    -replace '<availphysical>[\d]+</availphysical>', "<availphysical>$SubstituteString</availphysical>" `
                     -replace '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', "$SubstituteString" `
                     -replace '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z', "$SubstituteString" `
                     -replace '>PT[\w]+S<', ">$SubstituteString<" `
