@@ -21,7 +21,7 @@ function Edit-HXDynamicHostSet {
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [ValidateScript({Test-Path $_})]
-        [string] $HostSetValue
+        [string] $HostSetValueFile
     )
 
     begin {
@@ -110,7 +110,7 @@ function Edit-HXDynamicHostSet {
 
         ## Build the query request:
         # query object
-        $query = Convert-HXDynamicHostSetValue -Data (Get-Content -Path $HostSetValue -Encoding utf8)
+        $query = Convert-HXDynamicHostSetValue -Data (Get-Content -Path $HostSetValueFile -Encoding utf8)
 
         # add custom static hostset values to the $query var, like:
         # $query += New-HXDynamicHostSetValue -Operator 'equals' -Key 'Domain' -Value 'corporatedomain.com'
