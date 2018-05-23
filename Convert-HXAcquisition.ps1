@@ -166,9 +166,10 @@ function Convert-HXAcquisition {
                     -replace '<ExitCode>[\d]+</ExitCode>', "<ExitCode>$SubstituteString</ExitCode>" `
                     -replace '<lpcDevice>.+<\/lpcDevice>', "<lpcDevice>$SubstituteString</lpcDevice>" `
                     -replace '<availphysical>[\d]+</availphysical>', "<availphysical>$SubstituteString</availphysical>" `
+                    -replace '<CacheHitCount>[\d]+</CacheHitCount>', "<CacheHitCount>$SubstituteString</CacheHitCount>" `
                     -replace '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', "$SubstituteString" `
                     -replace '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z', "$SubstituteString" `
-                    -replace '>PT[\w]+S<', ">$SubstituteString<" `
+                    -replace '>(\+|PT)[\w]+(S|H)<', ">$SubstituteString<" `
                     | Out-String -NoNewline
             }
             else { $String | Out-String -NoNewline }
@@ -181,6 +182,7 @@ function Convert-HXAcquisition {
         # -- unique     ->  where acquisition files will be extracted. one file per type and per hostname will be keeped here. they will be the 'master' files.
         # -- changes    ->  where acquisition files will be written down only when a change in the acquisition file has been detected (all files will be compared with the files seen in the 'unique' folder).
         # -- tmp        ->  where acquisition files will be first extracted and then compared by md5 with it pair in the 'unique' folder (if any). all files will be deleted from this folder after compared. 
+        
         if (-not($BasePath)) { $_basepath = (Get-Item -Path ".\" -Verbose).FullName  }
         else { $_basepath = $BasePath }
 
@@ -200,8 +202,6 @@ function Convert-HXAcquisition {
 
         # Set-up the last-seen file:
         $_generatedat = Get-Date -Format o | ForEach-Object {$_ -replace ":", "."}
-        $_lastseenfile = [System.IO.Path]::Combine($_changes_path, $_generatedat + $Separator + "lastseen.csv")
-        if (Test-Path $_lastseenfile) { Remove-Item -Path $_lastseenfile -ErrorAction Stop }
 
         # Set-up timestamp for files acquired:
         $timestamp = $_generatedat
@@ -212,9 +212,9 @@ function Convert-HXAcquisition {
 
         Write-Verbose "[Convert-HXAcquisition] Proccesing $File"
 
-        # Controller name:
+        # Set-up the controller name:
         $controller = [string](([regex]::Match($Uri, "https?://(?<controller>[\w\-]+)\.")).groups["controller"].value)
-        
+
         # Check if the raw file is not in the raw folder. In case of positive, move it to the proper folder:
         if ([System.IO.Path]::GetDirectoryName($File) -ne $_raw_path) { 
             $_file = [System.IO.Path]::Combine($_raw_path, [System.IO.Path]::GetFileName($File))
@@ -328,6 +328,11 @@ function Convert-HXAcquisition {
 
             # Check if we have to produce the seen file per host:
             if ($ProduceLastSeenFile) {
+                
+                # Generate the file properties:
+                $_lastseenfile = [System.IO.Path]::Combine($_changes_path, $_generatedat + $Separator + $controller + $Separator + "lastseen.csv")
+                if (Test-Path $_lastseenfile) { Remove-Item -Path $_lastseenfile -ErrorAction Stop }
+
                 $out = New-Object System.Object
                 $out | Add-Member -Type NoteProperty -Name controller -Value $controller
                 $out | Add-Member -Type NoteProperty -Name hostset -Value $Hostset
