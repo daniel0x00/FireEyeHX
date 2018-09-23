@@ -1,5 +1,5 @@
 function Convert-HXAcquisition {
-    
+    [CmdletBinding()]
     [OutputType([psobject])]
     param(
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
