@@ -9,7 +9,25 @@ function New-HXSession {
         [System.Management.Automation.PSCredential] $Credential
     )
 
-    begin { }
+    begin {
+        
+        # Allow self-signed certificate:
+        add-type @"
+            using System.Net;
+            using System.Security.Cryptography.X509Certificates;
+            public class TrustAllCertsPolicy : ICertificatePolicy {
+                public bool CheckValidationResult(
+                    ServicePoint srvPoint, X509Certificate certificate,
+                    WebRequest request, int certificateProblem) {
+                    return true;
+                }
+            }
+"@
+
+        [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Ssl3, [System.Net.SecurityProtocolType]::Tls, [System.Net.SecurityProtocolType]::Tls11, [System.Net.SecurityProtocolType]::Tls12
+
+    }
     process {
         # Uri filtering:
         if ($Uri -match '\d$') { $Endpoint = $Uri+'/hx/api/v3/token' }
@@ -26,11 +44,11 @@ function New-HXSession {
         }
 
         # Make the request to the controller:
-        $WebRequest = Invoke-WebRequest -Uri $Endpoint -Method Get -SessionVariable LoginSession -ErrorAction Stop -Headers $headers -SkipCertificateCheck 
+        $WebRequest = Invoke-WebRequest -Uri $Endpoint -Method Get -SessionVariable LoginSession -ErrorAction Stop -Headers $headers 
 
-        $TokenSession = $WebRequest.Headers.'X-FeApi-Token' | out-string -NoNewline
+        $TokenSession = $WebRequest.Headers.'X-FeApi-Token' | Out-String
         # -NoNewLine was introduced in PS6.0, so use below to enable Windows PowerShell backwards compatibility:
-        #$TokenSession = $TokenSession -replace "`t|`n|`r","" # bugfix: 'out-string' introduce a new-line at the end of the string. This hack will remove it. 
+        $TokenSession = $TokenSession -replace "`t|`n|`r","" # bugfix: 'out-string' introduce a new-line at the end of the string. This hack will remove it. 
         
         if ($TokenSession -eq $null) { throw "Login token not observed in the authentication response." }
         
