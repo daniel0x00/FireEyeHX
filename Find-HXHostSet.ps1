@@ -52,7 +52,7 @@ function Find-HXHostSet {
         if ($Filter) { $Endpoint = $Endpoint + "&" + $Filter }
 
         # Request:
-        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers -SkipCertificateCheck
+        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers
         $WebRequestContent = $WebRequest.Content | ConvertFrom-Json
 
         # Return the object:
