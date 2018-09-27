@@ -5,18 +5,15 @@ function Find-HXHostSetList {
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string] $Uri,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
-
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
-        [string] $TokenSession, 
-
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Hostset,
+        [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("hostset_id")] 
         [int] $HostsetId,
+        
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [string] $Hostset,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [string] $Search,
@@ -31,10 +28,7 @@ function Find-HXHostSetList {
         [string] $Sort,
 
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $Filter,
-
-        [Parameter(Mandatory=$false)]
-        [switch] $Passthru
+        [string] $Filter
 
         # TODO: has_* fields. 
     )
@@ -48,8 +42,7 @@ function Find-HXHostSetList {
         else { $Endpoint = $Uri + "/?" }
 
          # Header:
-         $headers = @{ "Accept" = "application/json" }
-         if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
+        $headers = @{ "Accept" = "application/json" }
 
         if ($Search) { $Endpoint = $Endpoint + "&search=" + $Search }
         if ($Offset) { $Endpoint = $Endpoint + "&offset=" + $Offset }
@@ -62,18 +55,12 @@ function Find-HXHostSetList {
         $WebRequestContent = $WebRequest.Content | ConvertFrom-Json
 
         # Return the object:
-        
         $out = New-Object System.Object
         $out | Add-Member -Type NoteProperty -Name hostset_id -Value $HostsetId
         $out | Add-Member -Type NoteProperty -Name hostset -Value $Hostset
         $out | Add-Member -Type NoteProperty -Name data -Value $WebRequestContent.data
-
-        # Check if login data is required to be passed thru:
-        if ($Passthru) {
-            $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
-            if ($WebSession) { $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession } 
-            if ($TokenSession) { $out | Add-Member -Type NoteProperty -Name TokenSession -Value $TokenSession }
-        }
+        $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
+        $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession
 
         $out
     }

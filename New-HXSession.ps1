@@ -21,9 +21,7 @@ function New-HXSession {
         $password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
         $auth = "Basic " + [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($Credential.UserName):$($password)"))
 
-        $headers = @{
-            Authorization = $auth
-        }
+        $headers = @{ Authorization = $auth }
 
         # Make the request to the controller:
         $WebRequest = Invoke-WebRequest -Uri $Endpoint -Method Get -SessionVariable LoginSession -ErrorAction Stop -Headers $headers -SkipCertificateCheck 
