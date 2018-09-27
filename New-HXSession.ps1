@@ -9,25 +9,7 @@ function New-HXSession {
         [System.Management.Automation.PSCredential] $Credential
     )
 
-    begin {
-        
-        # Allow self-signed certificate:
-        add-type @"
-            using System.Net;
-            using System.Security.Cryptography.X509Certificates;
-            public class TrustAllCertsPolicy : ICertificatePolicy {
-                public bool CheckValidationResult(
-                    ServicePoint srvPoint, X509Certificate certificate,
-                    WebRequest request, int certificateProblem) {
-                    return true;
-                }
-            }
-"@
-
-        [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Ssl3, [System.Net.SecurityProtocolType]::Tls, [System.Net.SecurityProtocolType]::Tls11, [System.Net.SecurityProtocolType]::Tls12
-
-    }
+    begin { }
     process {
         # Uri filtering:
         if ($Uri -match '\d$') { $Endpoint = $Uri+'/hx/api/v3/token' }
