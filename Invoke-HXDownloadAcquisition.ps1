@@ -5,11 +5,8 @@ function Invoke-HXDownloadAcquisition {
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string] $Uri,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
-
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
-        [string] $TokenSession, 
+        [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string] $Acquisition,
@@ -65,7 +62,7 @@ function Invoke-HXDownloadAcquisition {
         else { $_path = $Path }
 
         # Webclient object.
-        $headers = @{ "Accept" = "application/octet-stream"; "X-FeApi-Token" = $TokenSession }
+        $headers = @{ "Accept" = "application/octet-stream"; }
         $null = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers -OutFile $_path -SkipCertificateCheck
 
         # .net WebClient object way. Faster, but not compatible with self-signed certificates and PowerShell Core:
@@ -80,6 +77,7 @@ function Invoke-HXDownloadAcquisition {
         $out | Add-Member -Type NoteProperty -Name Hostname -Value $Hostname
         $out | Add-Member -Type NoteProperty -Name Hostset -Value $Hostset
         $out | Add-Member -Type NoteProperty -Name File -Value $_path
+        
         $out
     }
     end { }

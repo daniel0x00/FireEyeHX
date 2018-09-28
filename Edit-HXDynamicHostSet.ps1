@@ -5,11 +5,8 @@ function Edit-HXDynamicHostSet {
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [string] $Uri,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
-
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $TokenSession,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("hostset_id")] 
@@ -105,8 +102,6 @@ function Edit-HXDynamicHostSet {
 
         # Header:
         $headers = @{ "Accept" = "application/json" }
-        if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
-
 
         ## Build the query request:
         # query object

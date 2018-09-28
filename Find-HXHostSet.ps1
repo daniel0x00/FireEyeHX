@@ -52,7 +52,7 @@ function Find-HXHostSet {
             $out | Add-Member -Type NoteProperty -Name revision -Value $_._revision
             $out | Add-Member -Type NoteProperty -Name hostset -Value $_.name
             $out | Add-Member -Type NoteProperty -Name type -Value $_.type
-            $out | Add-Member -Type NoteProperty -Name url -Value $_.url
+            $out | Add-Member -Type NoteProperty -Name endpoint -Value $_.url
             $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
             $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession
 
