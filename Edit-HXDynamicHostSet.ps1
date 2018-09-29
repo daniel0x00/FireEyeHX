@@ -5,11 +5,11 @@ function Edit-HXDynamicHostSet {
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         [string] $Uri,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [string] $TokenSession, 
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [string] $TokenSession,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [System.Net.WebProxy] $Proxy,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("hostset_id")] 
@@ -94,19 +94,12 @@ function Edit-HXDynamicHostSet {
             $out | Add-Member -type NoteProperty -name value -Value $Value
             $out
         }
-
     }
     process {
-
         # Uri filtering:
         if ($Uri -match '\d$') { $Endpoint = $Uri+"/hx/api/v3/host_sets/dynamic/$HostsetId" }
         elseif ($Uri -match '\d/$') { $Endpoint = $Uri+"hx/api/v3/host_sets/dynamic/$HostsetId" }
         else { $Endpoint = $Uri }
-
-        # Header:
-        $headers = @{ "Accept" = "application/json" }
-        if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
-
 
         ## Build the query request:
         # query object
@@ -128,14 +121,17 @@ function Edit-HXDynamicHostSet {
             $query = $unionoutput
         }
 
-        # full object
+        # Body object:
         $body = New-Object System.Object
         $body | Add-Member -Type NoteProperty -Name name -Value $HostSetName
         $body | Add-Member -Type NoteProperty -Name query -Value $query
 
         # Request:
-        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Put -Headers $headers -SkipCertificateCheck -Body ($body | ConvertTo-Json -Compress -Depth 99)
-
+        $WebClient = New-Object System.Net.WebClient
+        $WebClient.Headers.add('Accept', 'application/json')
+        $WebClient.Headers.add('X-FeApi-Token', $TokenSession)
+        if ($null -ne $Proxy) { $WebClient.Proxy = $Proxy }
+        $WebRequest = $WebClient.UploadString($Endpoint, 'PUT', ($body | ConvertTo-Json -Compress -Depth 99))
     }
     end { }
 }

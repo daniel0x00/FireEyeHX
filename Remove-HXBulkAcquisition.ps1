@@ -5,11 +5,11 @@ function Remove-HXBulkAcquisition {
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string] $Uri,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
-
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [string] $TokenSession, 
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [System.Net.WebProxy] $Proxy,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("bulkacquisition_id")]
@@ -18,19 +18,17 @@ function Remove-HXBulkAcquisition {
 
     begin { }
     process {
-
         # Uri filtering:
         if ($Uri -match '\d$') { $Endpoint = $Uri+"/hx/api/v3/acqs/bulk/$BulkAcquisitionId" }
         elseif ($Uri -match '\d/$') { $Endpoint = $Uri+"hx/api/v3/acqs/bulk/$BulkAcquisitionId" }
         else { $Endpoint = $Uri + "/?" }
 
-        # Header:
-        $headers = @{ "Accept" = "application/json" }
-        if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
-
         # Request:
-        $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Delete -Headers $headers -SkipCertificateCheck
-        
+        $WebClient = New-Object System.Net.WebClient
+        $WebClient.Headers.add('Accept', 'application/json')
+        $WebClient.Headers.add('X-FeApi-Token', $TokenSession)
+        if ($null -ne $Proxy) { $WebClient.Proxy = $Proxy }
+        $WebRequest = $WebClient.UploadString($Endpoint,'DELETE','')        
     }
     end { }
 }

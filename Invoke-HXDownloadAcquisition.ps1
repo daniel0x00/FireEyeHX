@@ -5,11 +5,11 @@ function Invoke-HXDownloadAcquisition {
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string] $Uri,
 
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
-        [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
-
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [string] $TokenSession, 
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+        [System.Net.WebProxy] $Proxy,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [string] $Acquisition,
@@ -29,7 +29,6 @@ function Invoke-HXDownloadAcquisition {
 
     begin { }
     process {
-
         # Uri filtering:
         if ($Uri -match '\d$') { $Endpoint = $Uri+$Acquisition }
         elseif ($Uri -match '\d/$') { $Endpoint = $Uri+$Acquisition }
@@ -64,16 +63,14 @@ function Invoke-HXDownloadAcquisition {
         }
         else { $_path = $Path }
 
-        # Webclient object.
-        $headers = @{ "Accept" = "application/octet-stream"; "X-FeApi-Token" = $TokenSession }
-        $null = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Get -Headers $headers -OutFile $_path -SkipCertificateCheck
+        # Request:
+        $WebClient = New-Object System.Net.WebClient
+        $WebClient.Headers.add('Accept', 'octet-stream')
+        $WebClient.Headers.add('X-FeApi-Token', $TokenSession)
+        if ($null -ne $Proxy) { $WebClient.Proxy = $Proxy }
+        $WebClient.DownloadFile($Endpoint, $_path)
 
-        # .net WebClient object way. Faster, but not compatible with self-signed certificates and PowerShell Core:
-        #$wc = New-Object System.Net.WebClient
-        #$wc.Headers.add('Accept','application/octet-stream')
-        #$wc.Headers.add('X-FeApi-Token',$TokenSession)
-        #$wc.DownloadFile($Endpoint, $_path)
-
+        # Return the object:
         $out = New-Object System.Object
         $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
         $out | Add-Member -Type NoteProperty -Name Acquisition -Value $Acquisition
