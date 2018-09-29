@@ -14,7 +14,7 @@ function Add-HXBulkAcquisition {
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [ValidateScript({Test-Path $_})]
-        [string] $Script,
+        [string] $ScriptFile,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("hostset_id")] 
@@ -36,7 +36,7 @@ function Add-HXBulkAcquisition {
         $headers = @{ "Accept" = "application/json" }
 
         # Body:
-        $base64_script = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((Get-Content -Path $Script -Raw -Encoding utf8)))
+        $base64_script = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes((Get-Content -Path $ScriptFile -Raw -Encoding utf8)))
         $body = "{`"host_set`":{`"_id`":$HostsetId},`"scripts`":[{`"platform`":`"$Platform`",`"b64`":`"$base64_script`"}],`"comment`":`"$Comment`"}"
 
         # Request:
