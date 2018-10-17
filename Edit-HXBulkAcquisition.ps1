@@ -42,6 +42,7 @@ function Edit-HXBulkAcquisition {
             $out | Add-Member -Type NoteProperty -Name create_time -Value $_.create_time
             $out | Add-Member -Type NoteProperty -Name state -Value $_.state
             $out | Add-Member -Type NoteProperty -Name endpoint -Value $_.url
+            $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
             $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession
 
             $out

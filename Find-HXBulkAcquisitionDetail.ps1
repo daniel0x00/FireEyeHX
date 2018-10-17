@@ -64,6 +64,7 @@ function Find-HXBulkAcquisitionDetail {
             $out | Add-Member -Type NoteProperty -Name result_ordinal -Value $_.result_ordinal
             $out | Add-Member -Type NoteProperty -Name state -Value $_.state
             $out | Add-Member -Type NoteProperty -Name error -Value $_.error
+            $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
             $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession
             
             $out

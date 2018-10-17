@@ -71,6 +71,7 @@ function Find-HXBulkAcquisition {
             $out | Add-Member -Type NoteProperty -Name state -Value $_.state
             $out | Add-Member -Type NoteProperty -Name endpoint -Value $_.url
             $out | Add-Member -Type NoteProperty -Name running_state -Value $_.stats.running_state
+            $out | Add-Member -Type NoteProperty -Name Uri -Value $Uri
             $out | Add-Member -Type NoteProperty -Name WebSession -Value $WebSession
             
             $out
