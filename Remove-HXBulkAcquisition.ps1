@@ -9,9 +9,6 @@ function Remove-HXBulkAcquisition {
         [Microsoft.PowerShell.Commands.WebRequestSession] $WebSession,
 
         [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
-        [string] $TokenSession, 
-
-        [Parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
         [Alias("bulkacquisition_id")]
         [int] $BulkAcquisitionId
     )
@@ -26,11 +23,9 @@ function Remove-HXBulkAcquisition {
 
         # Header:
         $headers = @{ "Accept" = "application/json" }
-        if (-not($WebSession) -and ($TokenSession)) { $headers += @{ "X-FeApi-Token" = $TokenSession } }
 
         # Request:
         $WebRequest = Invoke-WebRequest -Uri $Endpoint -WebSession $WebSession -Method Delete -Headers $headers -SkipCertificateCheck
-        
     }
     end { }
 }
